@@ -1,0 +1,6 @@
+*.mp4
+*.swp
+*.swo
+run
+vgcore.*
+plot/
