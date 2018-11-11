@@ -23,52 +23,6 @@ struct pixel
   }
 };
 
-void rgb2hsv(Eigen::Vector3f& in)
-{
-  Eigen::Vector3f out;
-  double      min, max, delta;
-
-  min = in[0] < in[1] ? in[0] : in[1];
-  min = min  < in[2] ? min  : in[2];
-
-  max = in[0] > in[1] ? in[0] : in[1];
-  max = max  > in[2] ? max  : in[2];
-
-  out[2] = max;                                // v
-  delta = max - min;
-  if (delta < 0.00001)
-  {
-      out[1] = 0;
-      out[0] = 0; // undefined, maybe nan?
-      in = out;
-      return;
-  }
-  if( max > 0.0 ) { // NOTE: if Max is == 0, this divide would cause a crash
-      out[1] = (delta / max);                  // s
-  } else {
-      // if max is 0, then r = g = b = 0              
-      // s = 0, h is undefined
-      out[1] = 0.0;
-      out[0] = 0.0;                            // its now undefined
-      in = out;
-      return;
-  }
-  if( in[0] >= max )                           // > is bogus, just keeps compilor happy
-      out[0] = ( in[1] - in[2] ) / delta;        // between yellow & magenta
-  else
-  if( in[1] >= max )
-      out[0] = 2.0 + ( in[2] - in[0] ) / delta;  // between cyan & yellow
-  else
-      out[0] = 4.0 + ( in[0] - in[1] ) / delta;  // between magenta & cyan
-
-  out[0] *= 60.0;                              // degrees
-
-  if( out[0] < 0.0 )
-      out[0] += 360.0;
-
-  in = out;
-}
-
 int main() {
   char ch = 0;
   int imgNum = 0;
@@ -86,7 +40,7 @@ int main() {
   double frame_rate = cap.get(CV_CAP_PROP_FPS);
   double frame_msec = 1000 / frame_rate;
   double video_time = 0;
-  cap.set(CV_CAP_PROP_POS_MSEC, 1.21e+5 - frame_msec * 500);
+  cap.set(CV_CAP_PROP_POS_MSEC, 1.21e+5); // - frame_msec * 500);
 
   cv::Mat frame;
   cv::namedWindow("Window", CV_WINDOW_NORMAL);
@@ -129,7 +83,7 @@ int main() {
       plotter::colors.reserve(nrows*ncols*3);
 
       pixel* start = (pixel*)frame.data + nrows;
-      pixel* end = (pixel*)frame.data + (nrows-1)*ncols/3;
+      pixel* end = (pixel*)frame.data + (nrows-1)*ncols;
 
       //plotter::add(points, sizeof(points)/sizeof(float));
       //plotter::add({.5,.5,.3, -.9,-.7,-.7});
@@ -152,9 +106,10 @@ int main() {
           //printf("%d\t%d\t%d\t\t", p->r, p->g, p->b);
           Eigen::Vector3f fp;
           fp << (float)p->r / 256., (float)p->g / 256., (float)p->b / 256.;
-          rgb2hsv(fp);
-          *((float*)&fp) /= 360.;
-          //printf("%f\t%f\t%f\t\t", *((float*)&fp), *((float*)&fp + 1), *((float*)&fp + 2));
+          //printf("9: %f\t%f\t%f\n", *((float*)&fp), *((float*)&fp + 1), *((float*)&fp + 2));
+          //rgb2hsv(fp);
+          //*((float*)&fp) /= 360.;
+          //printf("0: %f\t%f\t%f\n", *((float*)&fp), *((float*)&fp + 1), *((float*)&fp + 2));
           plotter::add((float*)&fp, 3);
         }
 
