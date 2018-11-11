@@ -23,13 +23,50 @@ struct pixel
   }
 };
 
+cv::VideoCapture cap;
+double frame_rate = cap.get(CV_CAP_PROP_FPS);
+double frame_msec = 1000 / frame_rate;
+double video_time = 0;
+bool videoMode = true;
+
+int process_sym(SDL_Keycode sym){
+  switch (sym) {
+    case SDLK_i:
+      videoMode = !videoMode;
+      break;
+    case SDLK_j:
+      video_time = cap.get(CV_CAP_PROP_POS_MSEC);
+      video_time -= frame_msec * 2;
+      cap.set(CV_CAP_PROP_POS_MSEC, video_time);
+      break;
+    case SDLK_u:
+      video_time = cap.get(CV_CAP_PROP_POS_MSEC);
+      video_time += frame_msec * 2;
+      cap.set(CV_CAP_PROP_POS_MSEC, video_time);
+      break;
+    case SDLK_h:
+      video_time = cap.get(CV_CAP_PROP_POS_MSEC);
+      video_time -= frame_msec * 200;
+      cap.set(CV_CAP_PROP_POS_MSEC, video_time);
+      break;
+    case SDLK_l:
+      video_time = cap.get(CV_CAP_PROP_POS_MSEC);
+      video_time += frame_msec * 200;
+      cap.set(CV_CAP_PROP_POS_MSEC, video_time);
+      break;
+    case SDLK_m:
+      cap.set(CV_CAP_PROP_POS_MSEC, 1.21e+5);
+      break;
+  }
+  return 0;
+}
+
 int main() {
   char ch = 0;
   int imgNum = 0;
   std::string imgName;
-  bool videoMode = true;
 
-  cv::VideoCapture cap("dtu_onboard_video.mp4");  //"dtu_onboard_video.mp4"
+  cap.open("dtu_onboard_video.mp4");  //"dtu_onboard_video.mp4"
   //cap.set(CV_CAP_PROP_POS_MSEC, 1.21e+5);
 
   if (!cap.isOpened()) {
@@ -37,15 +74,14 @@ int main() {
     return -1;
   }
 
-  double frame_rate = cap.get(CV_CAP_PROP_FPS);
-  double frame_msec = 1000 / frame_rate;
-  double video_time = 0;
   cap.set(CV_CAP_PROP_POS_MSEC, 1.21e+5); // - frame_msec * 500);
 
   cv::Mat frame;
   cv::namedWindow("Window", CV_WINDOW_NORMAL);
 
   plotter::init();
+
+  plotter::public_process_sym = process_sym;
 
 
   //plotter::add({0,0,0,1,0,0});
@@ -105,7 +141,7 @@ int main() {
           //printf("%f\t%f\t%f\t\t", *((float*)p), *((float*)p + 1), *((float*)p + 2));
           //printf("%d\t%d\t%d\t\t", p->r, p->g, p->b);
           Eigen::Vector3f fp;
-          fp << (float)p->r / 256., (float)p->g / 256., (float)p->b / 256.;
+          fp << (float)p->r / 255., (float)p->g / 255., (float)p->b / 255.;
           //printf("9: %f\t%f\t%f\n", *((float*)&fp), *((float*)&fp + 1), *((float*)&fp + 2));
           //rgb2hsv(fp);
           //*((float*)&fp) /= 360.;
