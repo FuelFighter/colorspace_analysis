@@ -1,0 +1,21 @@
+CC = g++
+
+CFLAGS += -std=c++17
+CFLAGS += -O2
+CFLAGS += -Wall
+CFLAGS += -g
+#CFLAGS += -fmax-errors=1
+
+INCLUDES += -I$(TUP_CWD)/external/include
+INCLUDES += -I/usr/local/include
+
+LIBS += -lSDL2
+LIBS += -lGL
+LIBS += -lGLEW
+LIBS += -lpthread
+
+# Compile position independent object code
+!cc = |> ^o CC %f^ $(CC) -fPIC -c %f -o %o $(CFLAGS) $(INCLUDES) |> %B.o
+
+# Link executable binary
+!lb = |> ^o LD %o^ $(CC) %f -o %o $(LIBS) |>
