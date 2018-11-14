@@ -27,35 +27,41 @@ cv::VideoCapture cap;
 double frame_rate = cap.get(CV_CAP_PROP_FPS);
 double frame_msec = 1000 / frame_rate;
 double video_time = 0;
-bool videoMode = true;
+bool plot = 1;
+bool new_frame = false;
 
 int process_sym(SDL_Keycode sym){
   switch (sym) {
     case SDLK_i:
-      videoMode = !videoMode;
+      plot = !plot;
       break;
-    case SDLK_j:
-      video_time = cap.get(CV_CAP_PROP_POS_MSEC);
-      video_time -= frame_msec * 2;
-      cap.set(CV_CAP_PROP_POS_MSEC, video_time);
-      break;
-    case SDLK_u:
-      video_time = cap.get(CV_CAP_PROP_POS_MSEC);
-      video_time += frame_msec * 2;
-      cap.set(CV_CAP_PROP_POS_MSEC, video_time);
-      break;
-    case SDLK_h:
-      video_time = cap.get(CV_CAP_PROP_POS_MSEC);
-      video_time -= frame_msec * 200;
-      cap.set(CV_CAP_PROP_POS_MSEC, video_time);
-      break;
-    case SDLK_l:
-      video_time = cap.get(CV_CAP_PROP_POS_MSEC);
-      video_time += frame_msec * 200;
-      cap.set(CV_CAP_PROP_POS_MSEC, video_time);
-      break;
+    //case SDLK_j:
+    //  video_time = cap.get(CV_CAP_PROP_POS_MSEC);
+    //  video_time -= frame_msec * 2;
+    //  cap.set(CV_CAP_PROP_POS_MSEC, video_time);
+    //  new_frame = true;
+    //  break;
+    //case SDLK_u:
+    //  video_time = cap.get(CV_CAP_PROP_POS_MSEC);
+    //  video_time += frame_msec * 2;
+    //  cap.set(CV_CAP_PROP_POS_MSEC, video_time);
+    //  new_frame = true;
+    //  break;
+    //case SDLK_h:
+    //  video_time = cap.get(CV_CAP_PROP_POS_MSEC);
+    //  video_time -= frame_msec * 200;
+    //  cap.set(CV_CAP_PROP_POS_MSEC, video_time);
+    //  new_frame = true;
+    //  break;
+    //case SDLK_l:
+    //  video_time = cap.get(CV_CAP_PROP_POS_MSEC);
+    //  video_time += frame_msec * 200;
+    //  cap.set(CV_CAP_PROP_POS_MSEC, video_time);
+    //  new_frame = true;
+    //  break;
     case SDLK_m:
       cap.set(CV_CAP_PROP_POS_MSEC, 1.21e+5);
+      new_frame = true;
       break;
   }
   return 0;
@@ -90,20 +96,19 @@ int main() {
   uint64_t now, before;
   before = now = SDL_GetPerformanceCounter();
 
-  bool new_frame = false;
 
   cap >> frame;
 
   //printf("channels: %d\n", frame.channels());
   new_frame = true;
-  bool plot = 1;
   bool done = false;
   while (!done)
   {
     if (plotter::poll_controls())
       break;
     iterate_time(now, before, dt, 60);
-    //cap >> frame;
+    if (new_frame)
+      cap >> frame;
 
     if (frame.empty()) {
       break;
@@ -136,24 +141,26 @@ int main() {
       {
         //int error = plotter::add((float*)start, (float*)end - (float*)start);
 
+        printf("start\n");
         for(pixel* p = start; p != end; ++p)
         {
           //printf("%f\t%f\t%f\t\t", *((float*)p), *((float*)p + 1), *((float*)p + 2));
           //printf("%d\t%d\t%d\t\t", p->r, p->g, p->b);
-          Eigen::Vector3f fp;
+          static Eigen::Vector3f fp;
           fp << (float)p->r / 255., (float)p->g / 255., (float)p->b / 255.;
           //printf("9: %f\t%f\t%f\n", *((float*)&fp), *((float*)&fp + 1), *((float*)&fp + 2));
           //rgb2hsv(fp);
           //*((float*)&fp) /= 360.;
           //printf("0: %f\t%f\t%f\n", *((float*)&fp), *((float*)&fp + 1), *((float*)&fp + 2));
-          plotter::add((float*)&fp, 3);
+          plotter::add((float*)&fp, 1);
         }
+        printf("fin\n");
 
         //printf("error: %d\n", error);
         new_frame = false;
       }
 
-      plotter::draw();
+      plotter::draw(nullptr);
     }
     else {
 
@@ -165,45 +172,9 @@ int main() {
         //p->b = 0;
       }
 
-      cv::imshow("Window", frame);
+      plotter::draw(&frame);
 
-      if (videoMode) {
-        ch = cv::waitKey(0);
-      } else {
-        ch = cv::waitKey(frame_msec);
-      }
-
-      switch (ch){
-        case 'i':
-          videoMode = !videoMode;
-          break;
-        case 'j':
-          video_time = cap.get(CV_CAP_PROP_POS_MSEC);
-          video_time -= frame_msec * 2;
-          cap.set(CV_CAP_PROP_POS_MSEC, video_time);
-          break;
-        case 'u':
-          video_time = cap.get(CV_CAP_PROP_POS_MSEC);
-          video_time += frame_msec * 2;
-          cap.set(CV_CAP_PROP_POS_MSEC, video_time);
-          break;
-        case 'h':
-          video_time = cap.get(CV_CAP_PROP_POS_MSEC);
-          video_time -= frame_msec * 200;
-          cap.set(CV_CAP_PROP_POS_MSEC, video_time);
-          break;
-        case 'l':
-          video_time = cap.get(CV_CAP_PROP_POS_MSEC);
-          video_time += frame_msec * 200;
-          cap.set(CV_CAP_PROP_POS_MSEC, video_time);
-          break;
-        case 'm':
-          cap.set(CV_CAP_PROP_POS_MSEC, 1.21e+5);
-          break;
-        case 27: // escape
-          done = true;
-          break; 
-      }
+      new_frame = false;
     }
   }
   cap.release();

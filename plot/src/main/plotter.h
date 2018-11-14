@@ -136,7 +136,7 @@ namespace plotter
 {
   bool down   = false;
   vec down_at;
-  float phi             = 0;
+  float phi             = M_PI;
   float theta           = 0;
   float xi              = 0;
   float down_at_phi     = 0;
@@ -239,7 +239,7 @@ namespace plotter
     Rx(mat,phi);
   }
 
-  void draw()
+  void draw(cv::Mat* frame)
   {
     Eigen::Matrix3f projection;
     projection.setIdentity();
@@ -256,24 +256,25 @@ namespace plotter
       displacement *= 1.5;
 
       phi = down_at_phi + displacement.y;
-      theta = down_at_theta + displacement.x;
+      theta = down_at_theta - displacement.x;
       //xi = down_at_xi + displacement.z;
     }
 
     rotate(projection, phi, theta, xi);
 
-    updateWp(vertices, colors, projection);
+    if (frame)
+      updateWp(vertices, colors, projection, *frame);
+    else
+      updateWp(vertices, colors, projection);
   }
 
-  int add(const float* start, const uint32_t length)
+  int add(const float* start, uint32_t length)
   {
     int error = 0;
-    if (length % 3 != 0)
-      error = 1;
     //vertices.insert(vertices.end(), start, start + length - (length % 3));
     //vertices.reserve(length);
     //colors.reserve(length);
-    for (Eigen::Vector3f* point = (Eigen::Vector3f*)start; point != (Eigen::Vector3f*)start + length - (length % 3); ++point)
+    for (Eigen::Vector3f* point = (Eigen::Vector3f*)start; point != (Eigen::Vector3f*)start + length; ++point)
     {
       Eigen::Vector3f vertex = *point;//->cwiseAbs();
       rgb2hsv(vertex);

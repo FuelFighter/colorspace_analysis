@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #define GLEW_STATIC
 #include <GL/glew.h>
+#include <SOIL/SOIL.h>
 #include <vector>
 #include <eigen3/Eigen/Dense>
 
@@ -9,6 +10,8 @@
 SDL_Window* window;
 SDL_GLContext glContext;
 
+void mat2texture(const cv::Mat& image, GLuint& imageTexture);
+void BindCVMat2GLTexture(const cv::Mat& image, GLuint& imageTexture);
 GLuint BuildShaderProgram(const char *vsPath, const char *fsPath);
 GLuint CreateShader(GLenum eShaderType, const char *strShaderFile);
 GLuint unit_shader;
@@ -21,6 +24,15 @@ GLuint axis_vertex_vbo;
 GLuint axis_color_vbo;
 
 GLint projection_loc;
+
+
+GLuint map_shader;
+GLuint map_vao;
+GLuint map_vertex_vbo;
+GLuint map_tex_coord_vbo;
+GLuint map_elements_vbo;
+GLuint map_tex_vbo;
+GLint map_coords_loc;
 
 uint32_t width, height;
 
@@ -85,6 +97,7 @@ int initWp(const std::vector<float>& vertices, const std::vector<float>& colors)
     }
 
     unit_shader = BuildShaderProgram("plot/shaders/unit_vs.glsl", "plot/shaders/unit_fs.glsl");
+    map_shader = BuildShaderProgram("plot/shaders/map_vs.glsl", "plot/shaders/map_fs.glsl");
 
 
 
@@ -131,6 +144,56 @@ int initWp(const std::vector<float>& vertices, const std::vector<float>& colors)
 
     projection_loc = glGetUniformLocation(unit_shader, "projection");
 
+
+
+
+    GLfloat map_vertices[] = {
+    //  Position      Color             
+        -1.0f,  1.0f, 1.0f, 0.0f, 0.0f,  // NW
+         1.0f,  1.0f, 0.0f, 1.0f, 0.0f,  // NE
+         1.0f, -1.0f, 0.0f, 0.0f, 1.0f,  // SE
+        -1.0f, -1.0f, 1.0f, 1.0f, 1.0f,  // SW
+    };
+
+    GLuint map_indices[] = {
+        0, 1, 2,
+        2, 3, 0
+    };
+
+
+    float texture_coords[] = {
+        0, 0,   // NW
+        1, 0,   // NE
+        1, 1,   // SE
+        0, 1,   // SW
+    };
+
+    {
+      glGenVertexArrays(1, &map_vao);
+      glGenBuffers(1, &map_vertex_vbo);
+      glGenBuffers(1, &map_tex_coord_vbo);
+      glGenBuffers(1, &map_elements_vbo);
+
+      glBindVertexArray(map_vao);
+
+      glBindBuffer(GL_ARRAY_BUFFER, map_vertex_vbo);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(map_vertices), map_vertices, GL_STATIC_DRAW);
+
+      GLint posAttrib = glGetAttribLocation(map_shader, "position");
+      glEnableVertexAttribArray(posAttrib);
+      glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), 0);
+      GLint colAttrib = glGetAttribLocation(map_shader, "color");
+      glEnableVertexAttribArray(colAttrib);
+      glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(2 * sizeof(GLfloat)));
+      glBindBuffer(GL_ARRAY_BUFFER, map_tex_coord_vbo);
+      GLint texAttrib = glGetAttribLocation(map_shader, "texcoord");
+      glEnableVertexAttribArray(texAttrib);
+      glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), 0);
+      glBufferData(GL_ARRAY_BUFFER, 8*sizeof(float), texture_coords, GL_DYNAMIC_DRAW);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, map_elements_vbo);
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(map_indices), map_indices, GL_STATIC_DRAW);
+    }
+
     //std::cout << width << " " << height << "\n";
     ////glViewport(-width/2, -height/2, width, height);
     //glViewport(0, 0, width, height);
@@ -175,6 +238,7 @@ int updateWp(const std::vector<float>& vertices, const std::vector<float>& color
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
+    glUseProgram(unit_shader);
     glBindVertexArray(axis_vao);
     // vertex_vbo
     glBindBuffer(GL_ARRAY_BUFFER, axis_vertex_vbo);
@@ -186,7 +250,6 @@ int updateWp(const std::vector<float>& vertices, const std::vector<float>& color
     glDrawArrays(GL_LINES, 0, 6);
 
 
-    glUseProgram(unit_shader);
     glBindVertexArray(unit_vao);
     // vertex_vbo
     glBindBuffer(GL_ARRAY_BUFFER, vertex_vbo);
@@ -204,6 +267,34 @@ int updateWp(const std::vector<float>& vertices, const std::vector<float>& color
     return 0;
 }
 
+int updateWp(const std::vector<float>& vertices, const std::vector<float>& colors, const Eigen::Matrix3f& projection, const cv::Mat frame)
+{
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+    glUseProgram(map_shader);
+    glBindVertexArray(map_vao);
+    mat2texture(frame, map_tex_vbo);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+
+      /* Draw a quad */
+    //glBegin(GL_QUADS);
+    //glTexCoord2i(0, 0); glVertex2i(0,   0);
+    //glTexCoord2i(0, 1); glVertex2i(0,   height);
+    //glTexCoord2i(1, 1); glVertex2i(width, height);
+    //glTexCoord2i(1, 0); glVertex2i(width, 0);
+    //glEnd();
+
+    //glDeleteTextures(1, &image_tex);
+    //glDisable(GL_TEXTURE_2D);
+
+
+    SDL_GL_SwapWindow(window);
+    return 0;
+}
+
 int cleanupWp()
 {
 
@@ -211,6 +302,74 @@ int cleanupWp()
     SDL_Quit();
 
     return 0;
+}
+
+void BindCVMat2GLTexture(const cv::Mat& image, GLuint& imageTexture)
+{
+   if(image.empty()){
+      printf("image empty\n");
+  }else{
+      //glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+      glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+      glGenTextures(1, &imageTexture);
+      glBindTexture(GL_TEXTURE_2D, imageTexture);
+
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+      cv::cvtColor(image, image, CV_RGB2BGR);
+
+      glTexImage2D(GL_TEXTURE_2D,         // Type of texture
+                      0,                   // Pyramid level (for mip-mapping) - 0 is the top level
+      GL_RGB,              // Internal colour format to convert to
+                      image.cols,          // Image width  i.e. 640 for Kinect in standard mode
+                      image.rows,          // Image height i.e. 480 for Kinect in standard mode
+                      0,                   // Border width in pixels (can either be 1 or 0)
+      GL_RGB,              // Input image format (i.e. GL_RGB, GL_RGBA, GL_BGR etc.)
+      GL_UNSIGNED_BYTE,    // Image data type
+      image.ptr());        // The actual image data itself
+
+      glUniform1i(glGetUniformLocation(map_shader, "tex"), 0);
+
+  }
+}
+
+void mat2texture(const cv::Mat& image, GLuint& imageTexture){
+    // Generate a number for our imageTexture's unique handle
+    glGenTextures(1, &imageTexture);
+
+    // Bind to our texture handle
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, imageTexture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Set incoming texture format to:
+    // GL_BGR       for CV_CAP_OPENNI_BGR_IMAGE,
+    // GL_LUMINANCE for CV_CAP_OPENNI_DISPARITY_MAP,
+    // Work out other mappings as required ( there's a list in comments in main() )
+    GLenum inputColourFormat = GL_BGR;
+    if (image.channels() == 1)
+    {
+        inputColourFormat = GL_LUMINANCE;
+    }
+
+    // Create the texture
+    glTexImage2D(GL_TEXTURE_2D,     // Type of texture
+                 0,                 // Pyramid level (for mip-mapping) - 0 is the top level
+                 GL_RGB,            // Internal colour format to convert to
+                 image.cols,          // Image width  i.e. 640 for Kinect in standard mode
+                 image.rows,          // Image height i.e. 480 for Kinect in standard mode
+                 0,                 // Border width in pixels (can either be 1 or 0)
+                 inputColourFormat, // Input image format (i.e. GL_RGB, GL_RGBA, GL_BGR etc.)
+                 GL_UNSIGNED_BYTE,  // Image data type
+                 image.ptr());        // The actual image data itself
+
 }
 
 GLuint BuildShaderProgram(const char *vsPath, const char *fsPath)

@@ -38,7 +38,7 @@ RUN  apt-get update && \
   rm -rf /opt/opencv*
 
 RUN $APT update && \
-  $APT install libsdl2-dev freeglut3-dev libglew-dev libeigen3-dev
+  $APT install libsdl2-dev freeglut3-dev libglew-dev libeigen3-dev libsoil-dev
 
 RUN $APT update && \
   $APT install gdb valgrind
