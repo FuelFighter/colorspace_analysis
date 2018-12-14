@@ -292,6 +292,31 @@ namespace plotter
     return error;
   }
 
+  int add_highlighted(const float* start, uint32_t length)
+  {
+    int error = 0;
+    //vertices.insert(vertices.end(), start, start + length - (length % 3));
+    //vertices.reserve(length);
+    //colors.reserve(length);
+    for (Eigen::Vector3f* point = (Eigen::Vector3f*)start; point != (Eigen::Vector3f*)start + length; ++point)
+    {
+      Eigen::Vector3f vertex = *point;//->cwiseAbs();
+      printf("highlighted rgb: %f, %f, %f\n", ((float*)point)[0], ((float*)point)[1], ((float*)point)[2]);
+      rgb2hsv(vertex);
+      //vertex[2] = 1;
+      hsvcartesian2cylinder(vertex);
+      vertices.insert(vertices.end(), (float*)&vertex, (float*)&vertex + 3);
+
+      //colors.insert(colors.end(), {1,1,1});
+      Eigen::Vector3f color; // = *point;//->cwiseAbs();
+      color << 0,1,0;
+      //color *= 1.0 / color.maxCoeff();
+      colors.insert(colors.end(), (float*)&color, (float*)&color + 3);
+    }
+
+    return error;
+  }
+
   //int add(std::initializer_list<float> points)
   //{
   //  int error = 0;

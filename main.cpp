@@ -24,17 +24,38 @@ struct pixel
 };
 
 cv::VideoCapture cap;
+cv::Mat frame;
 double frame_rate = cap.get(CV_CAP_PROP_FPS);
 double frame_msec = 1000 / frame_rate;
 double video_time = 0;
 bool plot = 1;
 bool new_frame = false;
+uint32_t nrows;
+uint32_t ncols;
 
 int process_sym(SDL_Keycode sym){
   switch (sym) {
     case SDLK_i:
       plot = !plot;
       break;
+    case SDLK_v:
+    {
+      int x, y;
+      SDL_GetMouseState(&x, &y);
+      float xf = 2*(float)x/width - 1;
+      float yf = 1 - 2*(float)y/height;
+
+      x = (xf + 1) * ncols / 2;
+      y = (1 - yf) * nrows / 2;
+
+      printf("x,y: %d,%d\n", x, y);
+
+      Eigen::Vector3f fp;
+      pixel* p = (pixel*)frame.data + y * ncols + x;;
+      fp << (float)p->r / 255. +.01, (float)p->g / 255. +.01, (float)p->b / 255. + .01;
+      plotter::add_highlighted((float*)&fp, 1);
+    }
+    break;
     //case SDLK_j:
     //  video_time = cap.get(CV_CAP_PROP_POS_MSEC);
     //  video_time -= frame_msec * 2;
@@ -82,7 +103,6 @@ int main() {
 
   cap.set(CV_CAP_PROP_POS_MSEC, 1.21e+5); // - frame_msec * 500);
 
-  cv::Mat frame;
   cv::namedWindow("Window", CV_WINDOW_NORMAL);
 
   plotter::init();
@@ -115,8 +135,8 @@ int main() {
     }
 
 
-    uint32_t nrows = frame.rows;
-    uint32_t ncols = frame.cols;
+    nrows = frame.rows;
+    ncols = frame.cols;
     //printf("nrows: %d, ncolsL %d\n", nrows, ncols);
 
     if (plot){
