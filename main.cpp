@@ -33,6 +33,9 @@ bool new_frame = false;
 uint32_t nrows;
 uint32_t ncols;
 
+pixel* nw_corner;
+pixel* se_corner;
+
 int process_sym(SDL_Keycode sym){
   switch (sym) {
     case SDLK_i:
@@ -48,12 +51,40 @@ int process_sym(SDL_Keycode sym){
       x = (xf + 1) * ncols / 2;
       y = (1 - yf) * nrows / 2;
 
-      printf("x,y: %d,%d\n", x, y);
+      //printf("x,y: %d,%d\n", x, y);
 
       Eigen::Vector3f fp;
       pixel* p = (pixel*)frame.data + y * ncols + x;;
-      fp << (float)p->r / 255. +.01, (float)p->g / 255. +.01, (float)p->b / 255. + .01;
+      fp << (float)p->r / 255. +.005, (float)p->g / 255. +.005, (float)p->b / 255. + .005;
       plotter::add_highlighted((float*)&fp, 1);
+    }
+    break;
+    case SDLK_b:
+    {
+      int x, y;
+      SDL_GetMouseState(&x, &y);
+      float xf = 2*(float)x/width - 1;
+      float yf = 1 - 2*(float)y/height;
+
+      x = (xf + 1) * ncols / 2;
+      y = (1 - yf) * nrows / 2;
+
+      printf("x,y: %d,%d\n", x, y);
+
+      Eigen::Vector3f fp;
+      static uint8_t twice = 0;
+      if (++twice % 2)
+         nw_corner = (pixel*)frame.data + y * ncols + x;
+      else
+      {
+        se_corner = (pixel*)frame.data + y * ncols + x;;
+        for (pixel* p = nw_corner; p < se_corner; p += ncols)
+          for (pixel* pp = p; pp < p + ncols; ++pp)
+          {
+            fp << (float)pp->r / 255. +.005, (float)pp->g / 255. +.005, (float)pp->b / 255. + .005;
+            plotter::add_highlighted((float*)&fp, 1);
+          }
+      }
     }
     break;
     //case SDLK_j:
