@@ -12,19 +12,13 @@
 
 void hsvcartesian2cylinder(Eigen::Vector3f& in)
 {
-  Eigen::Vector3f out = in;
-
-  //in[2] = 0;
-
-  out[0] = in[1] * sin(in[0]*2*M_PI);
-  out[1] = in[1] * cos(in[0]*2*M_PI);
-
-  in = out;
+  float tmp = in[1] * sin(in[0]);
+  in[1] = in[1] * cos(in[0]);
+  in[0] = tmp;
 }
 
-void rgb2hsv(Eigen::Vector3f& in)
+void rgb2hsv(Eigen::Vector3f& in, Eigen::Vector3f& out)
 {
-  Eigen::Vector3f out;
   double      min, max, delta;
 
   min = in[0] < in[1] ? in[0] : in[1];
@@ -60,13 +54,10 @@ void rgb2hsv(Eigen::Vector3f& in)
   else
       out[0] = 4.0 + ( in[0] - in[1] ) / delta;  // between magenta & cyan
 
-  out[0] *= 60.0;                              // degrees
+  out[0] *= M_PI/3;                              // degrees
 
-  if( out[0] < 0.0 )
-      out[0] += 360.0;
-
-  out[0] /= 360.;
-  in = out;
+  //if( out[0] < 0.0 )
+  //    out[0] += 2*M_PI;
 }
 
 void hsv2rgb(Eigen::Vector3f& in)
@@ -277,16 +268,16 @@ namespace plotter
     for (Eigen::Vector3f* point = (Eigen::Vector3f*)start; point != (Eigen::Vector3f*)start + length; ++point)
     {
       Eigen::Vector3f vertex = *point;//->cwiseAbs();
-      rgb2hsv(vertex);
+      Eigen::Vector3f out;
+      rgb2hsv(vertex, out);
       //vertex[2] = 1;
-      hsvcartesian2cylinder(vertex);
-      vertices.insert(vertices.end(), (float*)&vertex, (float*)&vertex + 3);
-      
+      hsvcartesian2cylinder(out);
+      vertices.insert(vertices.end(), (float*)&out, (float*)&out + 3);
 
       //colors.insert(colors.end(), {1,1,1});
-      Eigen::Vector3f color = *point;//->cwiseAbs();
+      //Eigen::Vector3f color = *point;//->cwiseAbs();
       //color *= 1.0 / color.maxCoeff();
-      colors.insert(colors.end(), (float*)&color, (float*)&color + 3);
+      colors.insert(colors.end(), (float*)point, (float*)point + 3);
     }
 
     return error;
@@ -301,10 +292,11 @@ namespace plotter
     for (Eigen::Vector3f* point = (Eigen::Vector3f*)start; point != (Eigen::Vector3f*)start + length; ++point)
     {
       Eigen::Vector3f vertex = *point;//->cwiseAbs();
+      Eigen::Vector3f out;
       printf("highlighted rgb: %f, %f, %f\n", ((float*)point)[0], ((float*)point)[1], ((float*)point)[2]);
-      rgb2hsv(vertex);
+      rgb2hsv(vertex, out);
       //vertex[2] = 1;
-      hsvcartesian2cylinder(vertex);
+      hsvcartesian2cylinder(out);
       vertices.insert(vertices.end(), (float*)&vertex, (float*)&vertex + 3);
 
       //colors.insert(colors.end(), {1,1,1});
