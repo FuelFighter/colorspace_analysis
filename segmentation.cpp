@@ -266,20 +266,42 @@ int main() {
     }
     else {
 
-      pixel* start = (pixel*)frame.data + nrows;
-      pixel* end = (pixel*)frame.data + (nrows-1)*ncols;
+      uint8_t* gray = new uint8_t[nrows*ncols];
+      uint8_t* grayit = gray;
+
+      pixel* start = (pixel*)frame.data;// + nrows;
+      pixel* end = (pixel*)frame.data + nrows*ncols;// (nrows-1)*ncols;
 
       for(pixel* p = start; p != end; ++p)
       {
         //p->b = 0;
-        hsv ph;
-        rgb2hsv(*p, ph);
+        //hsv ph;
+        //rgb2hsv(*p, ph);
         //printf("rgb:\t%d,%d,%d\thsv:%f,%f,%f\n", p->r, p->g, p->b, ph.h, ph.s, ph.v);
-        if (ph.s > .1 && (ph.h*ph.h < .1) && ph.v > .1)
-          *p = {0, 255, 0};
+        //if (ph.s > .1 && (ph.h*ph.h < .1) && ph.v > .1)
+        //  *p = {0, 255, 0};
+        uint16_t Vmax, Vmin;
+        if (p->r < p->g)
+        {
+          Vmin = p->r;
+          Vmax = p->g;
+        }
+        else
+        {
+          Vmin = p->g;
+          Vmax = p->r;
+        }
+        if (Vmax < p->b)
+          Vmax = p->b;
+        else if (Vmin > p->b)
+          Vmin = p->b;
+        //uint16_t lightness = (uint16_t)(Vmax + Vmin) / 2;
+        uint16_t lightness = Vmax ? (uint16_t)(Vmax - Vmin * 255) / Vmax : 0;
+
+        *grayit++ = lightness;
       }
 
-      plotter::draw(&frame);
+      plotter::draw(gray, nrows, ncols);
 
       new_frame = false;
     }

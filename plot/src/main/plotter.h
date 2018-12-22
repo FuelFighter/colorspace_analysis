@@ -259,6 +259,11 @@ namespace plotter
       updateWp(vertices, colors, projection);
   }
 
+  void draw(const uint8_t* gray, uint32_t rows, uint32_t cols)
+  {
+    updateWp(vertices, colors, gray, rows, cols);
+  }
+
   int add(const float* start, uint32_t length)
   {
     int error = 0;

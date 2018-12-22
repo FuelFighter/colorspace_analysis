@@ -11,6 +11,7 @@ SDL_Window* window;
 SDL_GLContext glContext;
 
 void mat2texture(const cv::Mat& image, GLuint& imageTexture);
+void gray2texture(const uint8_t* gray, GLuint& imageTexture, uint32_t rows, uint32_t cols);
 void BindCVMat2GLTexture(const cv::Mat& image, GLuint& imageTexture);
 GLuint BuildShaderProgram(const char *vsPath, const char *fsPath);
 GLuint CreateShader(GLenum eShaderType, const char *strShaderFile);
@@ -295,6 +296,34 @@ int updateWp(const std::vector<float>& vertices, const std::vector<float>& color
     return 0;
 }
 
+int updateWp(const std::vector<float>& vertices, const std::vector<float>& colors, const uint8_t* gray, uint32_t rows, uint32_t cols)
+{
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+    glUseProgram(map_shader);
+    glBindVertexArray(map_vao);
+    gray2texture(gray, map_tex_vbo, rows, cols);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+
+      /* Draw a quad */
+    //glBegin(GL_QUADS);
+    //glTexCoord2i(0, 0); glVertex2i(0,   0);
+    //glTexCoord2i(0, 1); glVertex2i(0,   height);
+    //glTexCoord2i(1, 1); glVertex2i(width, height);
+    //glTexCoord2i(1, 0); glVertex2i(width, 0);
+    //glEnd();
+
+    //glDeleteTextures(1, &image_tex);
+    //glDisable(GL_TEXTURE_2D);
+
+
+    SDL_GL_SwapWindow(window);
+    return 0;
+}
+
 int cleanupWp()
 {
 
@@ -369,6 +398,32 @@ void mat2texture(const cv::Mat& image, GLuint& imageTexture){
                  inputColourFormat, // Input image format (i.e. GL_RGB, GL_RGBA, GL_BGR etc.)
                  GL_UNSIGNED_BYTE,  // Image data type
                  image.ptr());        // The actual image data itself
+
+}
+
+void gray2texture(const uint8_t* gray, GLuint& imageTexture, uint32_t rows, uint32_t cols){
+    // Generate a number for our imageTexture's unique handle
+    glGenTextures(1, &imageTexture);
+
+    // Bind to our texture handle
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, imageTexture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Create the texture
+    glTexImage2D(GL_TEXTURE_2D,     // Type of texture
+      0,                 // Pyramid level (for mip-mapping) - 0 is the top level
+      GL_LUMINANCE,            // Internal colour format to convert to
+      cols,          // Image width  i.e. 640 for Kinect in standard mode
+      rows,          // Image height i.e. 480 for Kinect in standard mode
+      0,                 // Border width in pixels (can either be 1 or 0)
+      GL_LUMINANCE, // Input image format (i.e. GL_RGB, GL_RGBA, GL_BGR etc.)
+      GL_UNSIGNED_BYTE,  // Image data type
+      gray);        // The actual image data itself
 
 }
 
